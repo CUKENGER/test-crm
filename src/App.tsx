@@ -56,6 +56,7 @@ function App() {
   const [editTaskSiteId, setEditTaskSiteId] = useState("");
   const [editTaskAssigneeId, setEditTaskAssigneeId] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [executorView, setExecutorView] = useState<"tasks" | "sites">("tasks");
 
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === selectedTaskId) ?? null,
@@ -503,67 +504,138 @@ function App() {
 
       <div className="workspace">
         <section>
-          <h2>{isManager ? "Все объекты" : "Мои объекты и задачи"}</h2>
+          {!isManager && (
+            <div className="view-switch">
+              <button
+                type="button"
+                className={executorView === "tasks" ? "" : "secondary"}
+                onClick={() => setExecutorView("tasks")}
+              >
+                Мои задачи
+              </button>
+              <button
+                type="button"
+                className={executorView === "sites" ? "" : "secondary"}
+                onClick={() => setExecutorView("sites")}
+              >
+                Объекты
+              </button>
+            </div>
+          )}
 
-          {sites.length === 0 && <p>Пока нет доступных объектов.</p>}
+          <h2>
+            {isManager
+              ? "Все объекты"
+              : executorView === "tasks"
+                ? "Мои задачи"
+                : "Мои объекты"}
+          </h2>
 
-          {sites.map((site) => {
-            const siteTasks = tasks.filter((task) => task.site_id === site.id);
+          {!isManager && executorView === "tasks" ? (
+            tasks.length === 0 ? (
+              <p>У вас пока нет назначенных задач.</p>
+            ) : (
+              <ul className="task-list">
+                {tasks.map((task) => {
+                  const site = sites.find((item) => item.id === task.site_id);
 
-            return (
-              <article className="panel site-card" key={site.id}>
-                <div className="site-heading">
-                  <div>
-                    <h3>{site.name}</h3>
-                    <p>{site.address}</p>
-                  </div>
-                  <button
-                    className="secondary"
-                    onClick={() => void editSite(site)}
-                  >
-                    Редактировать объект
-                  </button>
-                  {isManager && (
-                    <button
-                      className="danger"
-                      onClick={() => void deleteSite(site)}
-                    >
-                      Удалить объект
-                    </button>
-                  )}
-                </div>
+                  return (
+                    <li key={task.id}>
+                      <button
+                        className={`task-link ${selectedTaskId === task.id ? "selected" : ""}`}
+                        onClick={() => {
+                          setSelectedTaskId(task.id);
+                          setHistory([]);
+                          setEditTitle(task.title);
+                          setEditDescription(task.description);
+                          setEditTaskSiteId(task.site_id);
+                          setEditTaskAssigneeId(task.assignee_id);
+                        }}
+                      >
+                        <span>
+                          <strong>{task.title}</strong>
+                          <small className="task-site">
+                            {site?.name ?? "Объект"}
+                          </small>
+                        </span>
+                        <span className="status">
+                          {STATUS_LABELS[task.status]}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          ) : (
+            <>
+              {sites.length === 0 && <p>Пока нет доступных объектов.</p>}
 
-                {siteTasks.length === 0 ? (
-                  <p>Задач пока нет.</p>
-                ) : (
-                  <ul className="task-list">
-                    {siteTasks.map((task) => (
-                      <li key={task.id}>
-                        <button
-                          className={`task-link ${selectedTaskId === task.id ? "selected" : ""}`}
-                          onClick={() => {
-                            setSelectedTaskId(task.id);
-                            setHistory([]);
-                            setEditTitle(task.title);
-                            setEditDescription(task.description);
-                            setEditTaskSiteId(task.site_id);
-                            setEditTaskAssigneeId(task.assignee_id);
-                          }}
-                        >
-                          <span>{task.title}</span>
-                          <span className="status">
-                            {STATUS_LABELS[task.status]}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            );
-          })}
+              {sites.map((site) => {
+                const siteTasks = tasks.filter(
+                  (task) => task.site_id === site.id,
+                );
+
+                return (
+                  <article className="panel site-card" key={site.id}>
+                    <div className="site-heading">
+                      <div>
+                        <h3>{site.name}</h3>
+                        <p>{site.address}</p>
+                      </div>
+
+                      {isManager && (
+                        <div className="site-actions">
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => void editSite(site)}
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => void deleteSite(site)}
+                          >
+                            Удалить объект
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {siteTasks.length === 0 ? (
+                      <p>Задач пока нет.</p>
+                    ) : (
+                      <ul className="task-list">
+                        {siteTasks.map((task) => (
+                          <li key={task.id}>
+                            <button
+                              className={`task-link ${selectedTaskId === task.id ? "selected" : ""}`}
+                              onClick={() => {
+                                setSelectedTaskId(task.id);
+                                setHistory([]);
+                                setEditTitle(task.title);
+                                setEditDescription(task.description);
+                                setEditTaskSiteId(task.site_id);
+                                setEditTaskAssigneeId(task.assignee_id);
+                              }}
+                            >
+                              <span>{task.title}</span>
+                              <span className="status">
+                                {STATUS_LABELS[task.status]}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                );
+              })}
+            </>
+          )}
         </section>
-
         <aside className="panel task-panel">
           {!selectedTask ? (
             <p>Выберите задачу, чтобы увидеть подробности и историю.</p>

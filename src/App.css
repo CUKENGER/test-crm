@@ -224,3 +224,22 @@ button.danger {
     align-items: flex-start;
   }
 }
+
+.view-switch,
+.site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.site-actions {
+  margin-bottom: 0;
+}
+
+.task-site {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
