@@ -53,6 +53,8 @@ function App() {
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
   const [taskComment, setTaskComment] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [editTaskSiteId, setEditTaskSiteId] = useState("");
+  const [editTaskAssigneeId, setEditTaskAssigneeId] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
   const selectedTask = useMemo(
@@ -281,6 +283,8 @@ function App() {
       .update({
         title: editTitle.trim(),
         description: editDescription.trim(),
+        site_id: editTaskSiteId,
+        assignee_id: editTaskAssigneeId,
       })
       .eq("id", selectedTask.id);
 
@@ -323,6 +327,31 @@ function App() {
     }
 
     setSelectedTaskId(null);
+    await refresh();
+  }
+
+  async function editSite(site: Site) {
+    const name = window.prompt("Название объекта", site.name);
+    if (name === null) return;
+
+    const address = window.prompt("Адрес объекта", site.address);
+    if (address === null) return;
+
+    if (!name.trim() || !address.trim()) {
+      setError("Название и адрес не должны быть пустыми.");
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("sites")
+      .update({ name: name.trim(), address: address.trim() })
+      .eq("id", site.id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
     await refresh();
   }
 
@@ -488,6 +517,12 @@ function App() {
                     <h3>{site.name}</h3>
                     <p>{site.address}</p>
                   </div>
+                  <button
+                    className="secondary"
+                    onClick={() => void editSite(site)}
+                  >
+                    Редактировать объект
+                  </button>
                   {isManager && (
                     <button
                       className="danger"
@@ -511,6 +546,8 @@ function App() {
                             setHistory([]);
                             setEditTitle(task.title);
                             setEditDescription(task.description);
+                            setEditTaskSiteId(task.site_id);
+                            setEditTaskAssigneeId(task.assignee_id);
                           }}
                         >
                           <span>{task.title}</span>
@@ -555,6 +592,33 @@ function App() {
                     onChange={(event) => setEditTitle(event.target.value)}
                     required
                   />
+                  <select
+                    value={editTaskSiteId}
+                    onChange={(event) => setEditTaskSiteId(event.target.value)}
+                    required
+                  >
+                    {sites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={editTaskAssigneeId}
+                    onChange={(event) =>
+                      setEditTaskAssigneeId(event.target.value)
+                    }
+                    required
+                  >
+                    {profiles
+                      .filter((item) => item.role === "executor")
+                      .map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.full_name || item.id}
+                        </option>
+                      ))}
+                  </select>
                   <textarea
                     value={editDescription}
                     onChange={(event) => setEditDescription(event.target.value)}
