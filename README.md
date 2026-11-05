@@ -1,75 +1,66 @@
-# React + TypeScript + Vite
+# Мини-CRM «Объекты и задачи»
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Небольшая CRM для строительной компании: руководитель создаёт объекты и задачи, назначает исполнителей и принимает результат. Исполнитель видит назначенные ему задачи, берёт их в работу и отправляет на проверку.
 
-Currently, two official plugins are available:
+## Стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- TypeScript
+- Vite
+- Supabase Auth и PostgreSQL
+- Row Level Security (RLS)
 
-## React Compiler
+## Локальный запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Установите Node.js.
+2. Установите зависимости:
 
-## Expanding the ESLint configuration
+   ```bash
+   npm install
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+3. Создайте `.env.local` в корне проекта:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+   ```env
+   VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<publishable-key>
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+   Используйте публичный publishable-ключ Supabase. Не используйте `sb_secret` или `service_role`.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+4. Запустите приложение:
 
-```
+   ```bash
+   npm run dev
+   ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+5. Проверьте production-сборку:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+   ```bash
+   npm run build
+   ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Настройка Supabase
 
-```
+1. В новом проекте Supabase выполните SQL из `supabase/migrations/20261105120000_init.sql` в SQL Editor.
+2. В Authentication отключите публичную регистрацию.
+3. Создайте пользователей вручную в Authentication → Users. Триггер создаст для каждого пользователя профиль с ролью `executor`.
+4. Чтобы назначить пользователя руководителем, выполните запрос в SQL Editor, подставив его email:
+
+   ```sql
+   update public.profiles
+   set role = 'manager'
+   where id = (
+     select id from auth.users where email = 'boss@example.com'
+   );
+   ```
+
+5. Проверку ограничений базы описывает `supabase/tests/security_check.sql`. Это ручные проверочные запросы, не автоматический набор тестов.
+
+## Доступ и статусы
+
+- Руководитель видит все объекты и задачи.
+- Исполнитель видит только задачи, назначенные ему, и объекты, к которым относятся эти задачи.
+- Смена статуса проходит через функцию базы данных `change_task_status`; прямое изменение поля статуса запрещено правами таблицы.
+- История переходов создаётся базой. Через клиентский API её нельзя добавлять, редактировать или удалять.
+- Публичный ключ Supabase используется в браузере. Права на данные ограничиваются правилами RLS в базе.
